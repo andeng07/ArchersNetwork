@@ -59,7 +59,7 @@ Update your `appsettings.json` with MongoDB connection details:
 ```bash
 dotnet restore
 dotnet build
-dotnet run
+dotnet run --project .\ArchersNetwork.Backend\
 ```
 
 By default, the API runs at:
