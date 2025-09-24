@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using ArchersNetwork.Backend.Features.Video.Dto;
+using MongoDB.Driver;
 
 namespace ArchersNetwork.Backend.Features.Video;
 
@@ -7,11 +8,94 @@ using Model;
 
 public class VideoService
 {
-    // TODO: convert to database
-
-    private static readonly ConcurrentDictionary<Guid, Video> _videos = new();
+    private readonly IMongoCollection<Video> _videos;
+    private ILogger<VideoService> _logger;
     
-    public static void Populate()
+    private const bool ShouldPopulate = false;
+    
+    public VideoService(IMongoClient client, IConfiguration config, ILogger<VideoService> logger)
+    {
+        var database = client.GetDatabase(config["MongoDB:DatabaseName"]);
+        _videos = database.GetCollection<Video>("videos");
+        _logger = logger;
+        
+        if (ShouldPopulate) Populate();
+    }
+
+    public async Task<Video> CreateVideo(VideoCreateDto videoCreateDto)
+    {
+        var guid = Guid.NewGuid();
+
+        var video = new Video
+        {
+            Id = guid,
+            Title = videoCreateDto.Title,
+            Date = videoCreateDto.Date,
+            Description = videoCreateDto.Description,
+            Link = videoCreateDto.Link,
+            Channel = videoCreateDto.Channel,
+            Series = videoCreateDto.Series,
+        };
+
+        await _videos.InsertOneAsync(video);
+
+        return video;
+    }
+
+    public async Task<Video?> FindVideo(Guid id)
+    {
+        var retrieveResult = await _videos.Find(video => video.Id == id).FirstOrDefaultAsync();
+
+        return retrieveResult;
+    }
+
+    public async Task<Video?> UpdateVideo(Guid id, VideoUpdateDto videoUpdateDto)
+    {
+        var video = new Video
+        {
+            Id = id,
+            Title = videoUpdateDto.Title,
+            Date = videoUpdateDto.Date,
+            Description = videoUpdateDto.Description,
+            Link = videoUpdateDto.Link,
+            Channel = videoUpdateDto.Channel,
+            Series = videoUpdateDto.Series,
+        };
+
+        var result = await _videos.ReplaceOneAsync(
+            v => v.Id == id,
+            video);
+
+        return result.ModifiedCount > 0 ? video : null;
+    }
+
+    public async Task<Video?> DeleteVideo(Guid id)
+    {
+        var result = await _videos.FindOneAndDeleteAsync(v => v.Id == id);
+        return result;
+    }
+
+    public async Task<IEnumerable<Video>> SelectBySeries(string series)
+    {
+        var videos = await _videos
+            .Find(v => v.Series.ToLower() == series.ToLower())
+            .ToListAsync();
+
+        return videos;
+    }
+
+    public async Task<IEnumerable<Video>> GetLatestInChannel(string channel, int limit)
+    {
+        var videos = await _videos
+            .Find(v => v.Channel.ToLower() == channel.ToLower())
+            .SortByDescending(v => v.Date)
+            .Limit(limit)
+            .ToListAsync();
+
+        return videos;
+    }
+    
+    private void Populate()
     {
         var seedData = new List<Video>
         {
@@ -207,90 +291,8 @@ public class VideoService
             }
         };
 
-        foreach (var video in seedData)
-        {
-            _videos.TryAdd(video.Id, video);
-        }
-    }
-
-    public VideoService()
-    {
-        Populate();
-    }
-
-    public async Task<Video> CreateVideo(VideoCreateDto videoCreateDto)
-    {
-        var guid = Guid.NewGuid();
-
-        var video = new Video
-        {
-            Id = guid,
-            Title = videoCreateDto.Title,
-            Date = videoCreateDto.Date,
-            Description = videoCreateDto.Description,
-            Link = videoCreateDto.Link,
-            Channel = videoCreateDto.Channel,
-            Series = videoCreateDto.Series,
-        };
-
-        _videos.TryAdd(guid, video);
-
-        return video;
-    }
-
-    public async Task<Video?> FindVideo(Guid id)
-    {
-        var retrieveResult = _videos.TryGetValue(id, out var video);
-
-        return !retrieveResult ? null : video;
-    }
-
-    public async Task<Video?> UpdateVideo(Guid id, VideoUpdateDto videoUpdateDto)
-    {
-        var retrievedVideo = _videos.TryGetValue(id, out var videoToUpdate);
-
-        if (!retrievedVideo) return null;
-
-        var video = new Video
-        {
-            Id = id,
-            Title = videoUpdateDto.Title,
-            Date = videoUpdateDto.Date,
-            Description = videoUpdateDto.Description,
-            Link = videoUpdateDto.Link,
-            Channel = videoUpdateDto.Channel,
-            Series = videoUpdateDto.Series,
-        };
-
-        var updateResult = _videos.TryUpdate(id, video, videoToUpdate!);
-
-        return updateResult ? video : null;
-    }
-
-    public async Task<Video?> DeleteVideo(Guid id)
-    {
-        var retrievedVideo = _videos.TryGetValue(id, out var videoToDelete);
-
-        if (!retrievedVideo) return null;
-
-        _videos.TryRemove(id, out var deleted);
-        return deleted;
-    }
-
-    public async Task<IEnumerable<Video>> SelectBySeries(string series)
-    {
-        var retrievedVideos =
-            _videos.Values.Where(video => video.Series.Equals(series, StringComparison.OrdinalIgnoreCase));
-
-        return retrievedVideos;
-    }
-
-    public async Task<IEnumerable<Video>> GetLatestInChannel(string channel, int limit)
-    {
-        var retrievedVideos = _videos.Values
-            .Where(video => video.Channel.Equals(channel, StringComparison.OrdinalIgnoreCase))
-            .Take(limit);
-
-        return retrievedVideos;
+        _videos.InsertMany(seedData);
+        
+        
     }
 }
