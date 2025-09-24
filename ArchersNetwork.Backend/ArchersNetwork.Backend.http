@@ -1,2 +1,46 @@
-@ArchersNetwork.Backend_HostAddress = http://localhost:5176
+@HostAddress = http://localhost:5176
+@Route = {{HostAddress}}/videos
 
+### Get all videos from a specific series
+GET {{Route}}/select-all?series=History Explained
+Accept: application/json
+
+### Get the latest video released by a certain channel
+GET {{Route}}/get-latest?channel=CodeAcademy&limit=5
+Accept: application/json
+
+### Create a new video
+POST {{Route}}
+Content-Type: application/json
+
+{
+  "title": "My First Video",
+  "date": "2025-09-24T10:00:00Z",
+  "description": "This is a sample video",
+  "link": "https://example.com/video.mp4",
+  "channel": "MyChannel",
+  "series": "Series1"
+}
+
+###
+@VideoId = 52f125b8-2949-4a1d-bb0d-6616f7fcc7fc
+
+### Get a video by ID
+GET {{Route}}/{{VideoId}}
+Accept: application/json
+
+### Update a video
+PUT {{Route}}/{{VideoId}}
+Content-Type: application/json
+
+{
+  "title": "Updated Video Title",
+  "description": "Updated description",
+  "link": "https://example.com/video-updated.mp4",
+  "channel": "MyChannel",
+  "series": "Series1"
+}
+
+### Delete a video
+DELETE {{Route}}/{{VideoId}}
+Accept: application/json
