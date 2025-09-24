@@ -1,3 +1,6 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace ArchersNetwork.Backend.Features.Video.Model;
 
 /// <summary>
@@ -7,6 +10,8 @@ namespace ArchersNetwork.Backend.Features.Video.Model;
 /// </summary>
 public class Video
 {
+    [BsonId]
+    [BsonRepresentation(BsonType.String)]
     public required Guid Id { get; init; }
     public required string Title { get; set; }
     public required DateTime Date { get; set; }
