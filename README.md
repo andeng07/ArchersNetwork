@@ -50,8 +50,7 @@ Update your `appsettings.json` with MongoDB connection details:
 {
   "MongoDB": {
     "ConnectionString": "mongodb://localhost:27017",
-    "DatabaseName": "ArchersNetworkDB",
-    "CollectionName": "Videos"
+    "DatabaseName": "ArchersNetworkDB"
   }
 }
 ```
